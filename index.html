@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SkripsiCheck — Analisis Akademik Cerdas</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,500;0,700;1,300&family=DM+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+:root{
+  --bg:#0f0f11;--surface:#17171b;--surface2:#1e1e24;--border:#2a2a35;
+  --text:#e8e6f0;--text-dim:#7a7890;--accent:#a78bfa;
+  --hl-hapus:rgba(239,68,68,.18);--hl-hapus-b:#ef4444;
+  --hl-tambah:rgba(59,130,246,.18);--hl-tambah-b:#3b82f6;
+  --hl-ubah:rgba(251,146,60,.18);--hl-ubah-b:#fb923c;
+  --hl-relevan:rgba(34,197,94,.18);--hl-relevan-b:#22c55e;
+  --hl-irrelevan:rgba(168,85,247,.18);--hl-irrelevan-b:#a855f7;
+  --hl-kuat:rgba(234,179,8,.18);--hl-kuat-b:#eab308;
+  --hl-plagiat:rgba(220,38,38,.22);--hl-plagiat-b:#dc2626;
+  --hl-sitasi:rgba(245,158,11,.18);--hl-sitasi-b:#f59e0b;
+  --hl-kaku:rgba(99,102,241,.18);--hl-kaku-b:#6366f1;
+  --hl-aipattern:rgba(20,184,166,.2);--hl-aipattern-b:#14b8a6;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;line-height:1.7;min-height:100vh;}
+header{background:var(--surface);border-bottom:1px solid var(--border);padding:10px 20px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:200;flex-wrap:wrap;}
+.logo{font-family:'Fraunces',serif;font-size:19px;font-weight:700;color:var(--accent);}
+.logo span{color:var(--text-dim);font-weight:300;}
+.badge{background:#1a1a2e;border:1px solid var(--border);color:var(--text-dim);font-size:10px;font-family:'DM Mono',monospace;padding:3px 9px;border-radius:20px;}
+
+.mode-bar{background:var(--surface2);border-bottom:1px solid var(--border);padding:8px 20px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;}
+.setup-label{font-size:11px;font-family:'DM Mono',monospace;color:var(--text-dim);text-transform:uppercase;letter-spacing:.5px;white-space:nowrap;}
+.mode-tab{padding:5px 14px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--text-dim);font-size:11px;font-family:'DM Mono',monospace;cursor:pointer;transition:all .15s;}
+.mode-tab:hover{border-color:var(--accent);color:var(--accent);}
+.mode-tab.active{background:rgba(167,139,250,.15);border-color:var(--accent);color:var(--accent);}
+.mode-tab.revisi-mode.active{background:rgba(236,72,153,.15);border-color:#ec4899;color:#ec4899;}
+.mode-tab.advance-mode.active{background:rgba(34,197,94,.12);border-color:#22c55e;color:#22c55e;}
+
+.setup-bar{background:var(--surface);border-bottom:1px solid var(--border);padding:8px 20px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+.jenjang-tabs{display:flex;gap:4px;}
+.jenjang-tab{padding:4px 12px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--text-dim);font-size:11px;font-family:'DM Mono',monospace;cursor:pointer;transition:all .15s;}
+.jenjang-tab:hover{border-color:var(--accent);color:var(--accent);}
+.jenjang-tab.active.s1{background:rgba(59,130,246,.15);border-color:#3b82f6;color:#3b82f6;}
+.jenjang-tab.active.s2{background:rgba(167,139,250,.15);border-color:#a78bfa;color:#a78bfa;}
+.jenjang-tab.active.s3{background:rgba(234,179,8,.15);border-color:#eab308;color:#eab308;}
+.pedoman-area{display:flex;align-items:center;gap:6px;margin-left:auto;}
+.pedoman-btn{display:flex;align-items:center;gap:5px;padding:4px 12px;border-radius:6px;border:1px dashed var(--border);background:transparent;color:var(--text-dim);font-size:11px;font-family:'DM Mono',monospace;cursor:pointer;position:relative;overflow:hidden;}
+.pedoman-btn:hover{border-color:#22c55e;color:#22c55e;}
+.pedoman-btn.loaded{border-color:#22c55e;color:#22c55e;border-style:solid;background:rgba(34,197,94,.08);}
+.pedoman-btn input{position:absolute;inset:0;opacity:0;cursor:pointer;}
+.pedoman-clear{background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:13px;padding:2px;}
+.pedoman-clear:hover{color:#ef4444;}
+
+.revisi-bar{background:rgba(236,72,153,.05);border-bottom:1px solid rgba(236,72,153,.2);padding:8px 20px;display:none;gap:8px;align-items:center;flex-wrap:wrap;}
+.revisi-bar.show{display:flex;}
+.revisi-upload-btn{display:flex;align-items:center;gap:5px;padding:5px 14px;border-radius:6px;border:1px dashed #ec4899;background:transparent;color:#ec4899;font-size:11px;font-family:'DM Mono',monospace;cursor:pointer;position:relative;}
+.revisi-upload-btn:hover{background:rgba(236,72,153,.1);}
+.revisi-upload-btn.loaded{border-style:solid;background:rgba(236,72,153,.1);}
+.revisi-upload-btn input{position:absolute;inset:0;opacity:0;cursor:pointer;}
+.revisi-clear{background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:13px;padding:2px;}
+.revisi-info{font-size:11px;color:rgba(236,72,153,.7);font-family:'DM Mono',monospace;}
+
+.advance-bar{background:rgba(34,197,94,.04);border-bottom:1px solid rgba(34,197,94,.2);padding:8px 20px;display:none;gap:8px;align-items:center;flex-wrap:wrap;}
+.advance-bar.show{display:flex;}
+.adv-check{display:flex;align-items:center;gap:5px;padding:4px 12px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--text-dim);font-size:11px;font-family:'DM Mono',monospace;cursor:pointer;transition:all .15s;}
+.adv-check.on{border-color:#22c55e;color:#22c55e;background:rgba(34,197,94,.08);}
+.adv-note{font-size:10px;color:var(--text-dim);font-family:'DM Mono',monospace;opacity:.7;}
+
+.container{display:grid;grid-template-columns:1fr 400px;height:calc(100vh - 120px);}
+.left-panel{display:flex;flex-direction:column;border-right:1px solid var(--border);overflow:hidden;position:relative;}
+.upload-area{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:28px;gap:12px;cursor:pointer;border:2px dashed var(--border);margin:14px;border-radius:12px;position:relative;transition:all .2s;}
+.upload-area:hover{background:var(--surface2);border-color:var(--accent);}
+.upload-area input{position:absolute;inset:0;opacity:0;cursor:pointer;}
+.upload-icon{font-size:40px;opacity:.4;}
+.upload-title{font-family:'Fraunces',serif;font-size:17px;color:var(--text-dim);text-align:center;}
+.upload-sub{font-size:11px;color:var(--text-dim);opacity:.6;text-align:center;}
+.upload-types{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin-top:2px;}
+.type-badge{border:1px solid var(--border);color:var(--text-dim);font-size:10px;font-family:'DM Mono',monospace;padding:2px 9px;border-radius:20px;background:var(--surface2);}
+.type-badge.pdf{border-color:#ef4444;color:#ef4444;background:rgba(239,68,68,.08);}
+.type-badge.txt{border-color:#3b82f6;color:#3b82f6;background:rgba(59,130,246,.08);}
+
+.pdf-progress{display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:40px;flex:1;}
+.pdf-progress.show{display:flex;}
+.progress-bar-wrap{width:100%;max-width:280px;background:var(--border);border-radius:10px;height:5px;overflow:hidden;}
+.progress-bar{height:100%;background:linear-gradient(90deg,#7c3aed,#a78bfa);border-radius:10px;transition:width .3s;width:0%;}
+.progress-text{font-size:12px;color:var(--text-dim);font-family:'DM Mono',monospace;}
+.progress-label{font-family:'Fraunces',serif;font-size:15px;color:var(--text-dim);}
+
+#thesis-input{display:none;flex:1;background:transparent;border:none;outline:none;padding:22px 26px;font-size:13.5px;line-height:1.9;color:#ccc9e0;resize:none;}
+.editor-container{flex:1;overflow:hidden;display:none;flex-direction:column;}
+.editor-toolbar{padding:8px 14px;display:flex;gap:6px;align-items:center;border-bottom:1px solid var(--border);flex-shrink:0;flex-wrap:wrap;}
+.panel-title{font-family:'Fraunces',serif;font-size:12px;font-weight:500;color:var(--text-dim);text-transform:uppercase;letter-spacing:.5px;}
+.toolbar-btn{background:var(--surface2);border:1px solid var(--border);color:var(--text-dim);padding:4px 11px;border-radius:6px;font-size:11px;font-family:'DM Mono',monospace;cursor:pointer;transition:all .15s;}
+.toolbar-btn:hover{border-color:var(--accent);color:var(--accent);}
+#analyze-btn{background:linear-gradient(135deg,#7c3aed,#a78bfa);border:none;color:white;padding:6px 18px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;margin-left:auto;transition:all .2s;}
+#analyze-btn:hover{transform:translateY(-1px);box-shadow:0 4px 18px rgba(124,58,237,.4);}
+#analyze-btn:disabled{opacity:.5;cursor:not-allowed;transform:none;}
+#analyze-btn.revisi{background:linear-gradient(135deg,#be185d,#ec4899);}
+#analyze-btn.advance{background:linear-gradient(135deg,#15803d,#22c55e);}
+
+.text-display{flex:1;overflow-y:auto;padding:22px 26px;line-height:1.9;font-size:13.5px;color:#ccc9e0;}
+.hl{border-radius:3px;padding:1px 0;border-bottom:2px solid;cursor:pointer;transition:opacity .15s;}
+.hl:hover{opacity:.8;}
+.hl.hapus{background:var(--hl-hapus);border-color:var(--hl-hapus-b);}
+.hl.tambah{background:var(--hl-tambah);border-color:var(--hl-tambah-b);}
+.hl.ubah{background:var(--hl-ubah);border-color:var(--hl-ubah-b);}
+.hl.relevan{background:var(--hl-relevan);border-color:var(--hl-relevan-b);}
+.hl.irrelevan{background:var(--hl-irrelevan);border-color:var(--hl-irrelevan-b);}
+.hl.kuat{background:var(--hl-kuat);border-color:var(--hl-kuat-b);}
+.hl.plagiat{background:var(--hl-plagiat);border-color:var(--hl-plagiat-b);}
+.hl.sitasi{background:var(--hl-sitasi);border-color:var(--hl-sitasi-b);}
+.hl.kaku{background:var(--hl-kaku);border-color:var(--hl-kaku-b);}
+.hl.aipattern{background:var(--hl-aipattern);border-color:var(--hl-aipattern-b);}
+.hl.sesuai_revisi{background:rgba(34,197,94,.2);border-color:#22c55e;}
+.hl.parsial{background:rgba(251,146,60,.2);border-color:#fb923c;}
+.hl.belum_revisi{background:rgba(239,68,68,.2);border-color:#ef4444;}
+
+.right-panel{display:flex;flex-direction:column;overflow:hidden;background:var(--surface);}
+.legend-strip{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;overflow-x:auto;}
+.legend-item{display:flex;align-items:center;gap:4px;padding:8px 10px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text-dim);cursor:pointer;border-right:1px solid var(--border);white-space:nowrap;transition:background .15s;flex-shrink:0;}
+.legend-item:hover,.legend-item.active-filter{background:var(--surface2);}
+.legend-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+
+.jenjang-indicator{padding:7px 16px;border-bottom:1px solid var(--border);display:none;align-items:center;gap:8px;flex-shrink:0;}
+.jenjang-indicator.show{display:flex;}
+.ji-badge{padding:2px 10px;border-radius:20px;font-size:10px;font-family:'DM Mono',monospace;border:1px solid;}
+.ji-badge.s1{color:#3b82f6;border-color:#3b82f6;background:rgba(59,130,246,.1);}
+.ji-badge.s2{color:#a78bfa;border-color:#a78bfa;background:rgba(167,139,250,.1);}
+.ji-badge.s3{color:#eab308;border-color:#eab308;background:rgba(234,179,8,.1);}
+.ji-badge.revisi{color:#ec4899;border-color:#ec4899;background:rgba(236,72,153,.1);}
+.ji-badge.advance{color:#22c55e;border-color:#22c55e;background:rgba(34,197,94,.1);}
+.ji-text{font-size:11px;color:var(--text-dim);}
+.pedoman-indicator{margin-left:auto;font-size:10px;color:#22c55e;font-family:'DM Mono',monospace;}
+
+/* Advanced score dashboard */
+.adv-dashboard{padding:12px 16px;border-bottom:1px solid var(--border);display:none;gap:10px;flex-shrink:0;}
+.adv-dashboard.show{display:flex;}
+.adv-score{flex:1;text-align:center;background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:10px 6px;}
+.adv-score-ring{width:40px;height:40px;position:relative;margin:0 auto 4px;}
+.adv-score-ring svg{transform:rotate(-90deg);}
+.adv-score-ring .num{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'Fraunces',serif;font-size:11px;font-weight:700;}
+.adv-score-label{font-size:8.5px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.3px;line-height:1.3;}
+
+.suggestions-panel{flex:1;overflow-y:auto;}
+.suggestion-card{border-bottom:1px solid var(--border);padding:13px 16px;transition:background .15s;cursor:pointer;display:none;}
+.suggestion-card:hover{background:var(--surface2);}
+.suggestion-card.visible{display:block;}
+.suggestion-card.active{background:var(--surface2);}
+.s-header{display:flex;align-items:flex-start;gap:7px;margin-bottom:6px;flex-wrap:wrap;}
+.s-tag{font-size:9px;font-family:'DM Mono',monospace;padding:2px 7px;border-radius:20px;border:1px solid;flex-shrink:0;text-transform:uppercase;letter-spacing:.5px;}
+.s-tag.hapus{color:#ef4444;border-color:#ef4444;background:rgba(239,68,68,.1);}
+.s-tag.tambah{color:#3b82f6;border-color:#3b82f6;background:rgba(59,130,246,.1);}
+.s-tag.ubah{color:#fb923c;border-color:#fb923c;background:rgba(251,146,60,.1);}
+.s-tag.relevan{color:#22c55e;border-color:#22c55e;background:rgba(34,197,94,.1);}
+.s-tag.irrelevan{color:#a855f7;border-color:#a855f7;background:rgba(168,85,247,.1);}
+.s-tag.kuat{color:#eab308;border-color:#eab308;background:rgba(234,179,8,.1);}
+.s-tag.plagiat{color:#dc2626;border-color:#dc2626;background:rgba(220,38,38,.12);}
+.s-tag.sitasi{color:#f59e0b;border-color:#f59e0b;background:rgba(245,158,11,.1);}
+.s-tag.kaku{color:#6366f1;border-color:#6366f1;background:rgba(99,102,241,.1);}
+.s-tag.aipattern{color:#14b8a6;border-color:#14b8a6;background:rgba(20,184,166,.1);}
+.s-tag.sesuai_revisi{color:#22c55e;border-color:#22c55e;background:rgba(34,197,94,.1);}
+.s-tag.parsial{color:#fb923c;border-color:#fb923c;background:rgba(251,146,60,.1);}
+.s-tag.belum_revisi{color:#ef4444;border-color:#ef4444;background:rgba(239,68,68,.1);}
+.s-aspek{font-size:10px;color:var(--text-dim);font-family:'DM Mono',monospace;margin-top:2px;}
+.s-title{font-size:12.5px;font-weight:600;color:var(--text);line-height:1.4;margin-bottom:4px;}
+.s-body{font-size:11.5px;color:#9994b0;line-height:1.6;}
+
+.s-confidence{display:inline-flex;align-items:center;gap:4px;margin-left:auto;font-size:9px;font-family:'DM Mono',monospace;color:var(--text-dim);}
+.conf-dot{width:6px;height:6px;border-radius:50%;}
+.conf-dot.high{background:#22c55e;}
+.conf-dot.med{background:#fb923c;}
+.conf-dot.low{background:#ef4444;}
+
+.s-revisi-point{margin-top:7px;padding:7px 11px;background:rgba(236,72,153,.07);border-left:2px solid #ec4899;border-radius:0 6px 6px 0;font-size:11.5px;color:#f9a8d4;line-height:1.5;}
+.s-revisi-point strong{display:block;font-size:9px;text-transform:uppercase;letter-spacing:.5px;opacity:.7;margin-bottom:2px;}
+.s-status-revisi{display:inline-flex;align-items:center;gap:5px;margin-bottom:6px;padding:3px 10px;border-radius:20px;font-size:10px;font-family:'DM Mono',monospace;border:1px solid;}
+.s-status-revisi.sesuai{border-color:#22c55e;color:#22c55e;background:rgba(34,197,94,.08);}
+.s-status-revisi.belum{border-color:#ef4444;color:#ef4444;background:rgba(239,68,68,.08);}
+.s-status-revisi.parsial{border-color:#fb923c;color:#fb923c;background:rgba(251,146,60,.08);}
+.s-pedoman-match{display:inline-flex;align-items:center;gap:4px;margin-bottom:6px;padding:3px 10px;border-radius:20px;font-size:10px;font-family:'DM Mono',monospace;border:1px solid #22c55e;color:#22c55e;background:rgba(34,197,94,.08);}
+
+.s-kutipan{margin-top:8px;background:rgba(15,15,17,.6);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:0 6px 6px 0;padding:7px 11px;}
+.s-kutipan-label{font-size:9px;font-family:'DM Mono',monospace;color:var(--text-dim);text-transform:uppercase;letter-spacing:.8px;margin-bottom:3px;}
+.s-kutipan-teks{font-size:11.5px;color:#ccc9e0;font-style:italic;line-height:1.5;}
+.s-kutipan-pengganti{margin-top:5px;padding-top:5px;border-top:1px solid var(--border);}
+.s-kutipan-pengganti-label{font-size:9px;font-family:'DM Mono',monospace;color:#22c55e;text-transform:uppercase;letter-spacing:.8px;margin-bottom:2px;}
+.s-kutipan-pengganti-teks{font-size:11.5px;color:#86efac;line-height:1.5;}
+.s-copy-btn{margin-top:5px;font-size:9px;font-family:'DM Mono',monospace;background:rgba(34,197,94,.1);border:1px solid #22c55e;color:#22c55e;padding:3px 10px;border-radius:5px;cursor:pointer;}
+.s-copy-btn:hover{background:rgba(34,197,94,.2);}
+
+.s-saran{margin-top:7px;padding:7px 11px;background:rgba(167,139,250,.07);border-left:2px solid var(--accent);border-radius:0 6px 6px 0;font-size:11.5px;color:var(--accent);line-height:1.6;}
+.s-saran strong{display:block;margin-bottom:2px;font-size:9px;opacity:.7;text-transform:uppercase;letter-spacing:.5px;}
+
+.s-ref-box{margin-top:7px;border:1px solid var(--border);border-radius:8px;overflow:hidden;}
+.s-ref-header{background:rgba(34,197,94,.08);border-bottom:1px solid var(--border);padding:5px 11px;font-size:9px;font-family:'DM Mono',monospace;color:#22c55e;text-transform:uppercase;letter-spacing:.5px;}
+.s-ref-item{padding:7px 11px;border-bottom:1px solid var(--border);}
+.s-ref-item:last-child{border-bottom:none;}
+.s-ref-judul{font-size:11.5px;color:var(--text);font-weight:500;line-height:1.4;}
+.s-ref-meta{font-size:10.5px;color:var(--text-dim);}
+.s-ref-links{display:flex;gap:5px;flex-wrap:wrap;margin-top:4px;}
+.s-ref-link{display:inline-flex;align-items:center;gap:3px;padding:2px 9px;border-radius:20px;font-size:10px;font-family:'DM Mono',monospace;text-decoration:none;border:1px solid;cursor:pointer;}
+.s-ref-link.scholar{color:#a78bfa;border-color:#a78bfa;background:rgba(167,139,250,.08);}
+.s-ref-link.google{color:#60a5fa;border-color:#60a5fa;background:rgba(96,165,250,.08);}
+.s-ref-link.doi{color:#fb923c;border-color:#fb923c;background:rgba(251,146,60,.08);}
+.s-ref-link.lib{color:#34d399;border-color:#34d399;background:rgba(52,211,153,.08);}
+
+.stats-bar{padding:10px 14px;border-top:1px solid var(--border);display:flex;gap:12px;flex-shrink:0;background:var(--bg);align-items:center;}
+.stat{text-align:center;}
+.stat-num{font-family:'Fraunces',serif;font-size:18px;font-weight:700;color:var(--accent);}
+.stat-label{font-size:9px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.5px;}
+.score-wrap{margin-left:auto;display:flex;align-items:center;gap:8px;}
+.score-ring{width:44px;height:44px;position:relative;}
+.score-ring svg{transform:rotate(-90deg);}
+.score-ring .score-num{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'Fraunces',serif;font-size:12px;font-weight:700;}
+.score-info{font-size:9px;color:var(--text-dim);}
+.score-info strong{display:block;font-size:11px;color:var(--text);}
+
+.loading-overlay{position:absolute;inset:0;background:rgba(15,15,17,.9);display:none;flex-direction:column;align-items:center;justify-content:center;gap:12px;z-index:50;padding:30px;}
+.loading-overlay.show{display:flex;}
+.spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;}
+.spinner.pink{border-top-color:#ec4899;}
+.spinner.green{border-top-color:#22c55e;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.loading-text{font-family:'Fraunces',serif;font-size:14px;color:var(--text-dim);text-align:center;}
+.loading-sub{font-size:11px;color:var(--text-dim);opacity:.6;font-family:'DM Mono',monospace;text-align:center;}
+.loading-steps{display:flex;flex-direction:column;gap:6px;margin-top:8px;width:100%;max-width:280px;}
+.lstep{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--text-dim);font-family:'DM Mono',monospace;opacity:.4;transition:opacity .3s;}
+.lstep.active{opacity:1;color:#22c55e;}
+.lstep.done{opacity:.7;color:var(--text-dim);}
+.lstep-icon{width:14px;text-align:center;}
+
+.empty-suggestions{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:10px;color:var(--text-dim);padding:28px;text-align:center;}
+.empty-suggestions .icon{font-size:34px;opacity:.3;}
+.empty-suggestions p{font-size:12px;line-height:1.6;}
+
+.ocr-overlay{position:fixed;inset:0;background:rgba(15,15,17,.92);z-index:999;display:none;flex-direction:column;align-items:center;justify-content:center;gap:18px;}
+.ocr-overlay.show{display:flex;}
+.ocr-box{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px 36px;display:flex;flex-direction:column;align-items:center;gap:12px;max-width:340px;width:90%;text-align:center;}
+.ocr-icon{font-size:38px;}
+.ocr-title{font-family:'Fraunces',serif;font-size:17px;}
+.ocr-progress-wrap{width:100%;background:var(--border);border-radius:10px;height:5px;overflow:hidden;}
+.ocr-progress{height:100%;background:linear-gradient(90deg,#7c3aed,#a78bfa);border-radius:10px;transition:width .4s;width:0%;}
+.ocr-status{font-size:11px;color:var(--text-dim);font-family:'DM Mono',monospace;}
+.ocr-preview{width:100%;max-height:140px;object-fit:contain;border-radius:8px;border:1px solid var(--border);display:none;}
+.ocr-preview.show{display:block;}
+
+::-webkit-scrollbar{width:4px;}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+@media(max-width:700px){.container{grid-template-columns:1fr;grid-template-rows:55vh 45vh;}.left-panel{border-right:none;border-bottom:1px solid var(--border);}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Skripsi<span>Check</span></div>
+  <div class="badge">AI Academic Reviewer · Pro</div>
+</header>
+
+<div class="mode-bar">
+  <span class="setup-label">Mode:</span>
+  <button class="mode-tab active" data-mode="analisis">🔍 Analisis Umum</button>
+  <button class="mode-tab advance-mode" data-mode="advance">🎯 Analisis Mendalam</button>
+  <button class="mode-tab revisi-mode" data-mode="revisi">📋 Cek Revisi Sidang</button>
+</div>
+
+<div class="setup-bar" id="setup-bar">
+  <span class="setup-label">Jenjang:</span>
+  <div class="jenjang-tabs">
+    <button class="jenjang-tab s1 active" data-level="s1">S1 — Skripsi</button>
+    <button class="jenjang-tab s2" data-level="s2">S2 — Tesis</button>
+    <button class="jenjang-tab s3" data-level="s3">S3 — Disertasi</button>
+  </div>
+  <div class="pedoman-area">
+    <label class="pedoman-btn" id="pedoman-btn">
+      <input type="file" id="pedoman-input" accept=".pdf,.txt,.md,.jpg,.jpeg,.png,.webp" />
+      <span id="pedoman-icon">📋</span>
+      <span id="pedoman-label">Upload Pedoman (PDF/Gambar/TXT)</span>
+    </label>
+    <button class="pedoman-clear" id="pedoman-clear" style="display:none">✕</button>
+  </div>
+</div>
+
+<!-- ADVANCE BAR -->
+<div class="advance-bar" id="advance-bar">
+  <span class="setup-label" style="color:#22c55e">Periksa:</span>
+  <button class="adv-check on" data-check="orisinalitas">🛡️ Orisinalitas</button>
+  <button class="adv-check on" data-check="aipattern">🤖 Pola Tulisan AI</button>
+  <button class="adv-check on" data-check="plagiarisme">📑 Plagiarisme & Sitasi</button>
+  <button class="adv-check on" data-check="kualitas">✍️ Kualitas & Keterbacaan</button>
+  <button class="adv-check on" data-check="presisi">🎯 Saran Presisi (2-tahap)</button>
+  <span class="adv-note">Analisis berlapis · lebih akurat · butuh waktu lebih lama</span>
+</div>
+
+<!-- REVISI BAR -->
+<div class="revisi-bar" id="revisi-bar">
+  <span class="setup-label" style="color:#ec4899">Poin Revisi:</span>
+  <label class="revisi-upload-btn" id="revisi-upload-btn">
+    <input type="file" id="revisi-input" accept=".pdf,.txt,.md,.jpg,.jpeg,.png,.webp" />
+    <span id="revisi-icon">📄</span>
+    <span id="revisi-label">Upload File Poin Revisi</span>
+  </label>
+  <button class="pedoman-clear revisi-clear" id="revisi-clear" style="display:none">✕</button>
+  <button id="toggle-revisi-text" style="padding:4px 10px;border-radius:6px;border:1px solid rgba(236,72,153,.4);background:transparent;color:#ec4899;font-size:10px;font-family:'DM Mono',monospace;cursor:pointer;">✏️ Ketik Manual</button>
+  <textarea id="revisi-textarea" placeholder="Ketik poin revisi sidang..." style="display:none;flex:1;min-width:200px;background:var(--surface2);border:1px solid rgba(236,72,153,.3);border-radius:6px;padding:6px 10px;color:var(--text);font-size:11px;resize:none;height:60px;outline:none;"></textarea>
+</div>
+
+<div class="container">
+  <div class="left-panel" id="left-panel">
+    <div class="upload-area" id="upload-area">
+      <input type="file" id="file-input" accept=".pdf,.txt,.doc,.docx" />
+      <div class="upload-icon">📄</div>
+      <div class="upload-title">Upload atau tempel skripsi</div>
+      <div class="upload-sub">Klik untuk pilih file atau tempel teks langsung</div>
+      <div class="upload-types"><span class="type-badge pdf">PDF ✓</span><span class="type-badge txt">TXT ✓</span></div>
+    </div>
+    <div class="pdf-progress" id="pdf-progress">
+      <div class="progress-label" id="pdf-progress-label">📄 Membaca PDF…</div>
+      <div class="progress-bar-wrap"><div class="progress-bar" id="progress-bar"></div></div>
+      <div class="progress-text" id="progress-text">Halaman 0 / 0</div>
+    </div>
+    <textarea id="thesis-input" placeholder="Atau tempel teks skripsi di sini..."></textarea>
+    <div class="editor-container" id="editor-container">
+      <div class="editor-toolbar">
+        <div class="panel-title">Teks Skripsi</div>
+        <button class="toolbar-btn" id="btn-edit">✏️ Edit</button>
+        <button class="toolbar-btn" id="btn-clear">🗑 Hapus</button>
+        <button id="analyze-btn">🔍 Analisis Skripsi</button>
+      </div>
+      <div class="text-display" id="text-display"></div>
+    </div>
+    <div class="loading-overlay" id="loading">
+      <div class="spinner" id="spinner"></div>
+      <div class="loading-text" id="loading-text">Menganalisis…</div>
+      <div class="loading-sub" id="loading-sub">Memeriksa aspek akademik</div>
+      <div class="loading-steps" id="loading-steps"></div>
+    </div>
+  </div>
+
+  <div class="right-panel">
+    <div class="legend-strip" id="legend-strip"></div>
+    <div class="jenjang-indicator" id="jenjang-indicator">
+      <div class="ji-badge s1" id="ji-badge">S1 — Skripsi</div>
+      <div class="ji-text" id="ji-text">Fokus: Aplikasi Ilmu & Ketepatan Prosedur</div>
+      <div class="pedoman-indicator" id="pedoman-indicator" style="display:none">📋 Pedoman aktif</div>
+    </div>
+    <div class="adv-dashboard" id="adv-dashboard"></div>
+    <div class="suggestions-panel" id="suggestions-panel">
+      <div class="empty-suggestions" id="empty-state">
+        <div class="icon">🎓</div>
+        <p>Pilih mode & jenjang, upload skripsi, lalu klik <strong>Analisis</strong>.</p>
+        <p style="font-size:10px;opacity:.5;margin-top:6px;"><strong>Analisis Mendalam</strong>: cek orisinalitas, plagiarisme/sitasi, kualitas tulisan, dan saran pengganti presisi tinggi (analisis 2-tahap).</p>
+      </div>
+    </div>
+    <div class="stats-bar" id="stats-bar" style="display:none">
+      <div class="stat"><div class="stat-num" id="stat-total">0</div><div class="stat-label">Temuan</div></div>
+      <div class="stat"><div class="stat-num" id="stat-a" style="color:#ef4444">0</div><div class="stat-label" id="stat-a-label">Hapus</div></div>
+      <div class="stat"><div class="stat-num" id="stat-b" style="color:#fb923c">0</div><div class="stat-label" id="stat-b-label">Ubah</div></div>
+      <div class="stat"><div class="stat-num" id="stat-c" style="color:#3b82f6">0</div><div class="stat-label" id="stat-c-label">Tambah</div></div>
+      <div class="score-wrap">
+        <div class="score-ring">
+          <svg viewBox="0 0 44 44" width="44" height="44">
+            <circle cx="22" cy="22" r="18" fill="none" stroke="#2a2a35" stroke-width="4"/>
+            <circle id="score-circle" cx="22" cy="22" r="18" fill="none" stroke="#a78bfa" stroke-width="4" stroke-dasharray="113.1" stroke-dashoffset="113.1" stroke-linecap="round" style="transition:stroke-dashoffset 1s ease"/>
+          </svg>
+          <div class="score-num" id="score-num">0</div>
+        </div>
+        <div class="score-info"><strong id="score-label">—</strong><span id="score-sublabel">Skor</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="ocr-overlay" id="ocr-overlay">
+  <div class="ocr-box">
+    <div class="ocr-icon">🔍</div>
+    <div class="ocr-title">Membaca Gambar/Scan…</div>
+    <img class="ocr-preview" id="ocr-preview" />
+    <div class="ocr-progress-wrap"><div class="ocr-progress" id="ocr-progress"></div></div>
+    <div class="ocr-status" id="ocr-status">Memproses dengan AI Vision…</div>
+  </div>
+</div>
+
+<script>
+pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+const MODEL="claude-sonnet-4-20250514";
+
+let originalText="",pedomanText="",revisiText="";
+let activeLevel="s1",activeMode="analisis",activeFilter="all";
+let advChecks={orisinalitas:true,aipattern:true,plagiarisme:true,kualitas:true,presisi:true};
+
+const JENJANG={
+  s1:{label:"S1 — Skripsi",fokus:"Fokus: Aplikasi Ilmu & Ketepatan Prosedur",aspek:["PENGUASAAN MATERI","RELEVANSI TEORI","METODOLOGI","ANALISIS DATA","SINKRONISASI","TEKNIS PENULISAN"],kriteria:`Jenjang S1 (Skripsi). Aplikasi ilmu, ketepatan prosedur. Aspek: PENGUASAAN MATERI, RELEVANSI TEORI (buku teks+jurnal), METODOLOGI (desain, populasi-sampel, validitas-reliabilitas), ANALISIS DATA, SINKRONISASI (rumusan masalah-kesimpulan), TEKNIS PENULISAN.`},
+  s2:{label:"S2 — Tesis",fokus:"Fokus: Pengembangan Ilmu & State of the Art",aspek:["STATE OF THE ART","NOVELTY","METODOLOGI KOMPLEKS","KUALITAS PEMBAHASAN","ARGUMENTASI","KESIAPAN PUBLIKASI"],kriteria:`Jenjang S2 (Tesis). State of the art, novelty. Aspek: STATE OF THE ART (jurnal bereputasi), NOVELTY, METODOLOGI KOMPLEKS (SEM/PLS), KUALITAS PEMBAHASAN, ARGUMENTASI, KESIAPAN PUBLIKASI SINTA/internasional.`},
+  s3:{label:"S3 — Disertasi",fokus:"Fokus: Original Novelty & Kontribusi Teoritis",aspek:["NOVELTY CLAIM","LANDASAN FILOSOFIS","RIGORITAS METODOLOGI","DAMPAK TEORITIS","REPUTASI REFERENSI","PUBLIKASI GLOBAL"],kriteria:`Jenjang S3 (Disertasi). Original novelty, kontribusi teoritis. Aspek: NOVELTY CLAIM, LANDASAN FILOSOFIS (ontologi-epistemologi-aksiologi), RIGORITAS METODOLOGI, DAMPAK TEORITIS, REPUTASI REFERENSI (Scopus Q1/Q2), PUBLIKASI GLOBAL.`}
+};
+
+const $=id=>document.getElementById(id);
+const uploadArea=$('upload-area'),fileInput=$('file-input'),thesisInput=$('thesis-input'),editorContainer=$('editor-container'),textDisplay=$('text-display'),analyzeBtn=$('analyze-btn'),loadingOverlay=$('loading'),suggestionsPanel=$('suggestions-panel'),emptyState=$('empty-state'),statsBar=$('stats-bar'),pdfProgress=$('pdf-progress'),progressBar=$('progress-bar'),progressText=$('progress-text'),pedomanInput=$('pedoman-input'),pedomanBtn=$('pedoman-btn'),pedomanLabel=$('pedoman-label'),pedomanIcon=$('pedoman-icon'),pedomanClear=$('pedoman-clear'),pedomanIndicator=$('pedoman-indicator'),jenjangIndicator=$('jenjang-indicator'),jiBadge=$('ji-badge'),jiText=$('ji-text'),revisiInput=$('revisi-input'),revisiLabel=$('revisi-label'),revisiIcon=$('revisi-icon'),revisiClear=$('revisi-clear'),revisiTextarea=$('revisi-textarea'),revisiBar=$('revisi-bar'),advanceBar=$('advance-bar'),advDashboard=$('adv-dashboard');
+
+// MODE SWITCH
+document.querySelectorAll('.mode-tab').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    activeMode=btn.dataset.mode;
+    document.querySelectorAll('.mode-tab').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    revisiBar.classList.remove('show');advanceBar.classList.remove('show');
+    $('setup-bar').style.display='flex';advDashboard.classList.remove('show');
+    $('spinner').className='spinner';analyzeBtn.className='';
+    if(activeMode==='revisi'){revisiBar.classList.add('show');$('setup-bar').style.display='none';analyzeBtn.textContent='📋 Cek Revisi';analyzeBtn.classList.add('revisi');$('spinner').classList.add('pink');setLegend('revisi');}
+    else if(activeMode==='advance'){advanceBar.classList.add('show');analyzeBtn.textContent='🎯 Analisis Mendalam';analyzeBtn.classList.add('advance');$('spinner').classList.add('green');setLegend('advance');}
+    else{analyzeBtn.textContent='🔍 Analisis Skripsi';setLegend('analisis');}
+  });
+});
+
+document.querySelectorAll('.adv-check').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    const k=btn.dataset.check;advChecks[k]=!advChecks[k];
+    btn.classList.toggle('on',advChecks[k]);
+  });
+});
+
+const LEGENDS={
+  analisis:[['all','#7a7890','Semua'],['relevan','#22c55e','✅ Relevan'],['kuat','#eab308','⭐ Kuat'],['ubah','#fb923c','🔄 Ubah'],['tambah','#3b82f6','➕ Tambah'],['irrelevan','#a855f7','⚠️ Tdk Relevan'],['hapus','#ef4444','❌ Hapus']],
+  advance:[['all','#7a7890','Semua'],['aipattern','#14b8a6','🤖 Pola AI'],['plagiat','#dc2626','📑 Plagiat'],['sitasi','#f59e0b','📌 Sitasi'],['kaku','#6366f1','✍️ Kaku'],['ubah','#fb923c','🔄 Ubah'],['kuat','#22c55e','✅ Orisinal']],
+  revisi:[['all','#7a7890','Semua'],['sesuai_revisi','#22c55e','✅ Sudah'],['parsial','#fb923c','⚠️ Parsial'],['belum_revisi','#ef4444','❌ Belum']]
+};
+function setLegend(mode){
+  $('legend-strip').innerHTML=LEGENDS[mode].map((l,i)=>`<div class="legend-item ${i===0?'active-filter':''}" data-filter="${l[0]}"><div class="legend-dot" style="background:${l[1]}"></div>${l[2]}</div>`).join('');
+  activeFilter='all';
+  $('legend-strip').querySelectorAll('.legend-item').forEach(item=>{
+    item.addEventListener('click',()=>{
+      activeFilter=item.dataset.filter;
+      $('legend-strip').querySelectorAll('.legend-item').forEach(l=>l.classList.remove('active-filter'));
+      item.classList.add('active-filter');applyFilter();
+    });
+  });
+}
+setLegend('analisis');
+function applyFilter(){document.querySelectorAll('.suggestion-card').forEach(c=>c.classList.toggle('visible',activeFilter==='all'||c.dataset.type===activeFilter));}
+
+// JENJANG
+document.querySelectorAll('.jenjang-tab').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    activeLevel=btn.dataset.level;
+    document.querySelectorAll('.jenjang-tab').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    const cfg=JENJANG[activeLevel];jiBadge.textContent=cfg.label;jiBadge.className=`ji-badge ${activeLevel}`;jiText.textContent=cfg.fokus;
+  });
+});
+
+// REVISI text toggle
+$('toggle-revisi-text').addEventListener('click',()=>{revisiTextarea.style.display=revisiTextarea.style.display==='none'?'block':'none';if(revisiTextarea.style.display==='block')revisiTextarea.focus();});
+
+// FILE READERS
+const IMG=['image/jpeg','image/jpg','image/png','image/webp'];
+async function extractPDF(file,isAux=false){
+  if(!isAux){uploadArea.style.display='none';pdfProgress.classList.add('show');}
+  try{
+    const ab=await file.arrayBuffer();const pdf=await pdfjsLib.getDocument({data:ab}).promise;
+    const total=pdf.numPages;let text='';
+    for(let i=1;i<=total;i++){const page=await pdf.getPage(i);const c=await page.getTextContent();text+=c.items.map(x=>x.str).join(' ')+'\n\n';if(!isAux){const p=Math.round(i/total*100);progressBar.style.width=p+'%';progressText.textContent=`Halaman ${i}/${total} (${p}%)`;}}
+    if(!isAux)pdfProgress.classList.remove('show');return text.trim();
+  }catch(e){if(!isAux)pdfProgress.classList.remove('show');return '';}
+}
+function readTextFile(file){return new Promise(r=>{const f=new FileReader();f.onload=e=>r(e.target.result||'');f.readAsText(file);});}
+function fileToBase64(file){return new Promise((res,rej)=>{const r=new FileReader();r.onload=e=>res(e.target.result.split(',')[1]);r.onerror=()=>rej();r.readAsDataURL(file);});}
+async function ocrImage(file){
+  const ov=$('ocr-overlay'),op=$('ocr-progress'),os=$('ocr-status'),opv=$('ocr-preview');
+  ov.classList.add('show');op.style.width='30%';os.textContent='AI membaca teks…';
+  try{const url=URL.createObjectURL(file);opv.src=url;opv.classList.add('show');
+    const b64=await fileToBase64(file);
+    const resp=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:MODEL,max_tokens:2000,messages:[{role:"user",content:[{type:"image",source:{type:"base64",media_type:file.type||'image/jpeg',data:b64}},{type:"text",text:"Ekstrak semua teks dari gambar ini lengkap dan akurat. Hanya teks."}]}]})});
+    const d=await resp.json();const t=d.content.map(i=>i.text||'').join('');
+    op.style.width='100%';os.textContent='✅ Selesai!';await new Promise(r=>setTimeout(r,400));
+    ov.classList.remove('show');opv.classList.remove('show');URL.revokeObjectURL(url);return t;
+  }catch(e){ov.classList.remove('show');return '';}
+}
+
+fileInput.addEventListener('change',async e=>{
+  const file=e.target.files[0];if(!file)return;
+  $('pdf-progress-label').textContent='📄 Membaca PDF…';
+  if(file.name.endsWith('.pdf')||file.type==='application/pdf'){const t=await extractPDF(file);if(t.length<50){alert('PDF tidak terbaca. Coba copy-paste manual.');uploadArea.style.display='flex';return;}showEditor(t);}
+  else{const t=await readTextFile(file);if(t.trim())showEditor(t);}
+});
+function showEditor(text){
+  originalText=text;uploadArea.style.display='none';pdfProgress.classList.remove('show');
+  thesisInput.style.display='none';editorContainer.style.display='flex';textDisplay.innerHTML=escapeHtml(text);
+  jenjangIndicator.classList.add('show');
+  if(activeMode==='revisi'){jiBadge.textContent='Mode Revisi';jiBadge.className='ji-badge revisi';jiText.textContent='Cek pemenuhan poin revisi';}
+  else if(activeMode==='advance'){jiBadge.textContent='Analisis Mendalam';jiBadge.className='ji-badge advance';jiText.textContent='Orisinalitas · Plagiarisme · Kualitas';}
+  else{const c=JENJANG[activeLevel];jiBadge.textContent=c.label;jiBadge.className=`ji-badge ${activeLevel}`;jiText.textContent=c.fokus;}
+  if(pedomanText)pedomanIndicator.style.display='block';
+}
+uploadArea.addEventListener('click',e=>{if(e.target===fileInput)return;uploadArea.style.display='none';thesisInput.style.display='block';thesisInput.style.flex='1';thesisInput.focus();});
+thesisInput.addEventListener('input',()=>{if(thesisInput.value.trim().length>80)showEditor(thesisInput.value);});
+$('btn-edit').addEventListener('click',()=>{editorContainer.style.display='none';thesisInput.style.display='block';thesisInput.style.flex='1';thesisInput.value=originalText;thesisInput.focus();});
+$('btn-clear').addEventListener('click',()=>{originalText='';textDisplay.innerHTML='';document.querySelectorAll('.suggestion-card').forEach(el=>el.remove());emptyState.style.display='flex';statsBar.style.display='none';advDashboard.classList.remove('show');uploadArea.style.display='flex';thesisInput.style.display='none';editorContainer.style.display='none';thesisInput.value='';fileInput.value='';progressBar.style.width='0%';jenjangIndicator.classList.remove('show');});
+
+// PEDOMAN
+pedomanInput.addEventListener('change',async e=>{
+  const file=e.target.files[0];if(!file)return;let ex='';
+  if(IMG.includes(file.type)||/\.(jpg|jpeg|png|webp)$/i.test(file.name))ex=await ocrImage(file);
+  else if(file.name.endsWith('.pdf')||file.type==='application/pdf'){$('pdf-progress-label').textContent='📋 Pedoman…';ex=await extractPDF(file,true);}
+  else ex=await readTextFile(file);
+  pedomanText=ex;
+  if(pedomanText.trim().length>20){pedomanBtn.classList.add('loaded');pedomanIcon.textContent='✅';pedomanLabel.textContent=file.name.length>22?file.name.slice(0,22)+'…':file.name;pedomanClear.style.display='block';pedomanIndicator.style.display='block';}
+});
+pedomanClear.addEventListener('click',()=>{pedomanText='';pedomanBtn.classList.remove('loaded');pedomanIcon.textContent='📋';pedomanLabel.textContent='Upload Pedoman (PDF/Gambar/TXT)';pedomanClear.style.display='none';pedomanIndicator.style.display='none';pedomanInput.value='';});
+
+// REVISI
+revisiInput.addEventListener('change',async e=>{
+  const file=e.target.files[0];if(!file)return;let t='';
+  if(IMG.includes(file.type)||/\.(jpg|jpeg|png|webp)$/i.test(file.name))t=await ocrImage(file);
+  else if(file.name.endsWith('.pdf')||file.type==='application/pdf')t=await extractPDF(file,true);
+  else t=await readTextFile(file);
+  if(t.trim().length>10){revisiText=t;$('revisi-upload-btn').classList.add('loaded');revisiIcon.textContent='✅';revisiLabel.textContent=file.name.length>22?file.name.slice(0,22)+'…':file.name;revisiClear.style.display='block';}
+});
+revisiClear.addEventListener('click',()=>{revisiText='';$('revisi-upload-btn').classList.remove('loaded');revisiIcon.textContent='📄';revisiLabel.textContent='Upload File Poin Revisi';revisiClear.style.display='none';revisiInput.value='';});
+
+// ── API HELPER ───────────────────────────────────────────────────────────────
+async function callAPI(system,user,maxTokens=4000){
+  const resp=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:MODEL,max_tokens:maxTokens,system,messages:[{role:"user",content:user}]})});
+  const data=await resp.json();
+  const raw=data.content.map(i=>i.text||'').join('');
+  return JSON.parse(raw.replace(/```json|```/g,'').trim());
+}
+
+function setSteps(steps){
+  $('loading-steps').innerHTML=steps.map((s,i)=>`<div class="lstep" id="lstep-${i}"><span class="lstep-icon">○</span>${s}</div>`).join('');
+}
+function stepActive(i){const el=$('lstep-'+i);if(el){el.classList.add('active');el.querySelector('.lstep-icon').textContent='◉';}}
+function stepDone(i){const el=$('lstep-'+i);if(el){el.classList.remove('active');el.classList.add('done');el.querySelector('.lstep-icon').textContent='✓';}}
+
+// ── ANALYZE ──────────────────────────────────────────────────────────────────
+analyzeBtn.addEventListener('click',async()=>{
+  const text=originalText.trim();
+  if(!text||text.length<50){alert('Teks terlalu pendek.');return;}
+  if(activeMode==='revisi'){
+    const rv=revisiText||revisiTextarea.value.trim();
+    if(!rv||rv.length<20){alert('Upload atau ketik poin revisi dulu.');return;}
+    await doRevisi(text,rv);
+  } else if(activeMode==='advance'){
+    await doAdvance(text);
+  } else {await doAnalisis(text);}
+});
+
+// ── MODE: ANALISIS UMUM ───────────────────────────────────────────────────────
+async function doAnalisis(text){
+  analyzeBtn.disabled=true;loadingOverlay.classList.add('show');emptyState.style.display='none';
+  document.querySelectorAll('.suggestion-card').forEach(el=>el.remove());setSteps([]);
+  const cfg=JENJANG[activeLevel];
+  $('loading-text').textContent=`Menganalisis ${cfg.label}…`;
+  $('loading-sub').textContent=pedomanText?'Menyinkronkan dengan pedoman…':'Memeriksa aspek akademik';
+  const ped=pedomanText?`\nPEDOMAN KAMPUS:\n${pedomanText.slice(0,2500)}\nTandai ketidaksesuaian dengan aspek "PEDOMAN KAMPUS".`:'';
+  const sys=`Reviewer akademik senior Indonesia. Analisis ${cfg.label}:\n${cfg.kriteria}${ped}\n\nRespons HANYA JSON:\n{"skor":<0-100>,"ringkasan":"<2 kalimat>","temuan":[{"id":"t1","tipe":"<hapus|tambah|ubah|relevan|irrelevan|kuat>","aspek":"<${cfg.aspek.join('|')}${pedomanText?'|PEDOMAN KAMPUS':''}>","judul":"","deskripsi":"","saran":"","kutipan_asli":"<5-15 kata dari teks>","kutipan_pengganti":"<contoh lebih baik atau kosong>","pedoman_match":"","referensi":[{"judul":"","penulis":"","url_google":"https://scholar.google.com/scholar?q=...","url_doi":"","keterangan":""}]}]}\n8-15 temuan beragam.`;
+  try{renderResults(await callAPI(sys,`Analisis:\n\n${text.slice(0,9000)}`),'analisis');}
+  catch(e){console.error(e);renderResults(demoAnalisis(),'analisis');}
+  finally{loadingOverlay.classList.remove('show');analyzeBtn.disabled=false;}
+}
+
+// ── MODE: ANALISIS MENDALAM (multi-stage) ─────────────────────────────────────
+async function doAdvance(text){
+  analyzeBtn.disabled=true;loadingOverlay.classList.add('show');emptyState.style.display='none';
+  document.querySelectorAll('.suggestion-card').forEach(el=>el.remove());
+  $('loading-text').textContent='Analisis Mendalam berjalan…';
+  $('loading-sub').textContent='Beberapa tahap pemeriksaan';
+
+  const steps=[];
+  if(advChecks.orisinalitas||advChecks.kualitas)steps.push('Tahap 1 · Orisinalitas & kualitas tulisan');
+  if(advChecks.aipattern)steps.push('Tahap 2 · Deteksi pola tulisan AI');
+  if(advChecks.plagiarisme)steps.push('Tahap 3 · Plagiarisme & sitasi');
+  if(advChecks.presisi)steps.push('Tahap 4 · Verifikasi & saran presisi');
+  steps.push('Menyusun hasil');
+  setSteps(steps);
+  let si=0;
+
+  let allTemuan=[];
+  let scores={orisinalitas:null,kualitas:null,sitasi:null,aipattern:null};
+
+  try{
+    // STAGE 1: Originality + quality
+    if(advChecks.orisinalitas||advChecks.kualitas){
+      stepActive(si);
+      const sys1=`Anda editor akademik ahli bahasa Indonesia. Periksa kualitas dan orisinalitas tulisan ilmiah. Tujuan: membantu penulis membuat tulisan lebih natural, orisinal, dan berbobot akademik — BUKAN menyembunyikan apa pun, tapi memperbaiki kualitas sejati.
+
+Deteksi:
+- Kalimat kaku, repetitif, atau "terdengar seperti template/generik" (tipe "kaku")
+- Kalimat yang terlalu umum/dangkal yang perlu diperdalam (tipe "ubah")
+- Bagian yang sudah ditulis dengan baik, orisinal, mengalir (tipe "kuat")
+
+Respons HANYA JSON:
+{"skor_orisinalitas":<0-100, makin tinggi makin orisinal/natural>,"skor_kualitas":<0-100 keterbacaan akademik>,"temuan":[{"id":"q1","tipe":"<kaku|ubah|kuat>","aspek":"KUALITAS TULISAN","judul":"","deskripsi":"<jelaskan kenapa kaku/generik/baik>","saran":"<cara membuat lebih natural & berbobot>","kutipan_asli":"<5-15 kata persis dari teks>","kutipan_pengganti":"<versi lebih natural & akademis, atau kosong jika kuat>","confidence":"<high|med|low>"}]}
+Berikan 5-10 temuan paling penting.`;
+      const r1=await callAPI(sys1,`Periksa tulisan:\n\n${text.slice(0,9000)}`,4000);
+      scores.orisinalitas=r1.skor_orisinalitas;scores.kualitas=r1.skor_kualitas;
+      (r1.temuan||[]).forEach(t=>allTemuan.push(t));
+      stepDone(si);si++;
+    }
+
+    // STAGE: AI writing pattern detection (highlight only — for manual rewrite)
+    if(advChecks.aipattern){
+      stepActive(si);
+      const sysAI=`Anda analis gaya bahasa yang membantu mahasiswa MENGENALI bagian tulisannya yang berciri khas tulisan AI, agar mereka bisa MENULIS ULANG SENDIRI dengan kata-kata mereka. Tujuannya diagnostik: menandai + menjelaskan, bukan menyamarkan.
+
+Ciri tulisan AI yang sering muncul dalam teks akademik Indonesia:
+- Frasa transisi berlebihan/klise ("Dengan demikian", "Hal ini menunjukkan bahwa", "Lebih lanjut", "Oleh karena itu" yang berulang)
+- Struktur kalimat yang terlalu seimbang/paralel dan repetitif
+- Kalimat penjelas yang generik tanpa detail konkret/spesifik lapangan
+- Pola "tidak hanya... tetapi juga...", "baik... maupun..." yang berlebihan
+- Penutup paragraf yang merangkum ulang secara mekanis
+- Diksi yang terlalu rapi/formal seragam tanpa variasi suara penulis
+
+Untuk SETIAP temuan, jelaskan KENAPA terbaca seperti AI dan beri arahan agar penulis menulis ulang dengan suaranya sendiri (jangan tuliskan ulang penuh untuk mereka — beri arah, contoh singkat boleh).
+
+Respons HANYA JSON:
+{"skor_aipattern":<0-100, makin TINGGI makin terbaca natural/manusiawi>,"temuan":[{"id":"ai1","tipe":"aipattern","aspek":"POLA TULISAN AI","judul":"<ciri yang terdeteksi>","deskripsi":"<kenapa kalimat ini berciri AI>","saran":"<arahan agar ditulis ulang manual dengan suara sendiri>","kutipan_asli":"<5-15 kata persis dari teks>","kutipan_pengganti":"<contoh singkat arah revisi, atau kosong agar penulis menulis sendiri>","confidence":"<high|med|low>"}]}
+Berikan 5-12 temuan, fokus pada bagian yang paling kentara. Ingat: penulis akan merevisi MANUAL sendiri.`;
+      try{
+        const rAI=await callAPI(sysAI,`Deteksi pola AI:\n\n${text.slice(0,9000)}`,4000);
+        scores.aipattern=rAI.skor_aipattern;
+        (rAI.temuan||[]).forEach(t=>{t.tipe='aipattern';allTemuan.push(t);});
+      }catch(e){console.error('aipattern failed',e);}
+      stepDone(si);si++;
+    }
+
+    // STAGE 2: Plagiarism + citation
+    if(advChecks.plagiarisme){
+      stepActive(si);
+      const sys2=`Anda pemeriksa integritas akademik. Periksa potensi plagiarisme & masalah sitasi dalam tulisan ilmiah Indonesia. Tujuan: membantu penulis MENSITASI dengan benar dan menulis ulang dengan kata sendiri — menjaga kejujuran akademik.
+
+Deteksi:
+- Klaim/data/definisi yang TAMPAK dikutip dari sumber tapi TANPA sitasi (nama, tahun) → tipe "plagiat"
+- Pernyataan faktual spesifik (angka, statistik, definisi ahli) yang butuh rujukan tapi tidak ada → tipe "sitasi"
+- Parafrase yang kemungkinan terlalu dekat dengan sumber asli → tipe "plagiat"
+
+Untuk setiap temuan, beri saran cara mensitasi yang benar (format APA) atau cara parafrase ulang dengan kata sendiri.
+
+Respons HANYA JSON:
+{"skor_sitasi":<0-100 makin tinggi makin baik sitasinya>,"temuan":[{"id":"p1","tipe":"<plagiat|sitasi>","aspek":"INTEGRITAS AKADEMIK","judul":"","deskripsi":"<kenapa ini berisiko/butuh sitasi>","saran":"<cara mensitasi benar atau parafrase ulang>","kutipan_asli":"<5-15 kata persis dari teks>","kutipan_pengganti":"<versi dengan sitasi benar atau parafrase orisinal>","confidence":"<high|med|low>"}]}
+Berikan 4-10 temuan. Jangan menuduh; bersikap membantu.`;
+      const r2=await callAPI(sys2,`Periksa integritas:\n\n${text.slice(0,9000)}`,4000);
+      scores.sitasi=r2.skor_sitasi;
+      (r2.temuan||[]).forEach(t=>allTemuan.push(t));
+      stepDone(si);si++;
+    }
+
+    // STAGE 3: Precision verification of replacement suggestions
+    if(advChecks.presisi&&allTemuan.length>0){
+      stepActive(si);
+      const toVerify=allTemuan.filter(t=>t.kutipan_pengganti&&t.kutipan_pengganti.length>5).slice(0,12);
+      if(toVerify.length>0){
+        const sys3=`Anda editor akademik paling teliti. Tinjau ulang saran pengganti kalimat agar PALING TEPAT: akurat secara makna, natural, sesuai konteks skripsi Indonesia, dan benar secara akademik. Perbaiki jika saran pengganti kurang tepat.
+
+Respons HANYA JSON:
+{"verifikasi":[{"id":"<id sama>","kutipan_pengganti_final":"<versi terbaik & paling tepat>","confidence":"<high|med|low>","alasan":"<singkat kenapa versi ini lebih tepat>"}]}`;
+        const payload=toVerify.map(t=>({id:t.id,asli:t.kutipan_asli,saran_awal:t.kutipan_pengganti,konteks:t.deskripsi})).slice(0,12);
+        try{
+          const r3=await callAPI(sys3,`Konteks skripsi: ${text.slice(0,1500)}\n\nTinjau saran berikut:\n${JSON.stringify(payload)}`,3000);
+          (r3.verifikasi||[]).forEach(v=>{
+            const t=allTemuan.find(x=>x.id===v.id);
+            if(t){t.kutipan_pengganti=v.kutipan_pengganti_final||t.kutipan_pengganti;t.confidence=v.confidence||t.confidence;t.alasan_presisi=v.alasan;}
+          });
+        }catch(e){console.error('verify failed',e);}
+      }
+      stepDone(si);si++;
+    }
+
+    stepActive(si); // menyusun hasil
+    // Re-id for uniqueness
+    allTemuan.forEach((t,i)=>t.id='adv'+i);
+    renderResults({temuan:allTemuan,_scores:scores},'advance');
+    stepDone(si);
+
+  }catch(e){console.error(e);renderResults(demoAdvance(),'advance');}
+  finally{loadingOverlay.classList.remove('show');analyzeBtn.disabled=false;}
+}
+
+// ── MODE: REVISI ──────────────────────────────────────────────────────────────
+async function doRevisi(text,rv){
+  analyzeBtn.disabled=true;loadingOverlay.classList.add('show');emptyState.style.display='none';
+  document.querySelectorAll('.suggestion-card').forEach(el=>el.remove());setSteps([]);
+  $('loading-text').textContent='Mengecek pemenuhan revisi…';
+  $('loading-sub').textContent='Membandingkan naskah dengan poin revisi';
+  const sys=`Anda reviewer yang mengecek apakah revisi sidang sudah dipenuhi dalam naskah.\nPOIN REVISI:\n${rv}\n\nBandingkan tiap poin dengan naskah. Respons HANYA JSON:\n{"skor_revisi":<0-100>,"ringkasan":"<2 kalimat>","temuan":[{"id":"r1","tipe":"<sesuai_revisi|parsial|belum_revisi>","bab":"<bagian>","judul":"","poin_revisi_asli":"","status_detail":"","bukti_dalam_naskah":"<kutipan bukti atau kosong>","saran":"<langkah jika belum/parsial>","kutipan_asli":"<5-12 kata dari naskah>","referensi":[{"judul":"","penulis":"","url_google":"https://scholar.google.com/scholar?q=...","url_doi":"","keterangan":""}]}]}\nCek SETIAP poin satu per satu.`;
+  try{renderResults(await callAPI(sys,`POIN REVISI:\n${rv}\n\nNASKAH:\n${text.slice(0,9000)}`,5000),'revisi');}
+  catch(e){console.error(e);renderResults(demoRevisi(),'revisi');}
+  finally{loadingOverlay.classList.remove('show');analyzeBtn.disabled=false;}
+}
+
+// ── RENDER ────────────────────────────────────────────────────────────────────
+function renderResults(data,mode){
+  emptyState.style.display='none';
+  let hl=escapeHtml(originalText);
+  (data.temuan||[]).forEach(t=>{
+    if(t.kutipan_asli&&t.kutipan_asli.length>3){
+      const esc=escapeHtml(t.kutipan_asli);
+      hl=hl.replace(new RegExp(escapeRegex(esc),'gi'),`<span class="hl ${t.tipe}" data-id="${t.id}" onclick="focusCard('${t.id}')">${esc}</span>`);
+    }
+  });
+  textDisplay.innerHTML=hl;
+  if(mode==='revisi')renderRevisi(data);
+  else if(mode==='advance')renderAdvance(data);
+  else renderAnalisis(data);
+}
+
+function renderAnalisis(data){
+  const L={hapus:'❌ Hapus',tambah:'➕ Tambah',ubah:'🔄 Ubah',relevan:'✅ Relevan',irrelevan:'⚠️ Tidak Relevan',kuat:'⭐ Kuat'};
+  let c={hapus:0,tambah:0,ubah:0,relevan:0,irrelevan:0,kuat:0};
+  const order=['hapus','irrelevan','ubah','tambah','kuat','relevan'];
+  [...(data.temuan||[])].sort((a,b)=>order.indexOf(a.tipe)-order.indexOf(b.tipe)).forEach(t=>{if(c[t.tipe]!==undefined)c[t.tipe]++;suggestionsPanel.appendChild(buildCard(t,L[t.tipe]||t.tipe,'analisis'));});
+  showStats(Object.values(c).reduce((a,b)=>a+b,0),[c.hapus,'Hapus','#ef4444'],[c.ubah,'Ubah','#fb923c'],[c.tambah,'Tambah','#3b82f6']);
+  setScore(data.skor||0,'#a78bfa','Skor Publikasi');applyFilter();
+}
+
+function renderAdvance(data){
+  const L={aipattern:'🤖 Pola AI',plagiat:'📑 Plagiarisme',sitasi:'📌 Perlu Sitasi',kaku:'✍️ Kaku/Generik',ubah:'🔄 Perdalam',kuat:'✅ Orisinal'};
+  let c={aipattern:0,plagiat:0,sitasi:0,kaku:0,ubah:0,kuat:0};
+  const order=['aipattern','plagiat','sitasi','kaku','ubah','kuat'];
+  [...(data.temuan||[])].sort((a,b)=>order.indexOf(a.tipe)-order.indexOf(b.tipe)).forEach(t=>{if(c[t.tipe]!==undefined)c[t.tipe]++;suggestionsPanel.appendChild(buildCard(t,L[t.tipe]||t.tipe,'advance'));});
+
+  // Dashboard scores
+  const s=data._scores||{};
+  advDashboard.classList.add('show');
+  const cards=[];
+  if(s.aipattern!=null)cards.push(['Natural (vs AI)',s.aipattern]);
+  if(s.orisinalitas!=null)cards.push(['Orisinalitas',s.orisinalitas]);
+  if(s.kualitas!=null)cards.push(['Keterbacaan',s.kualitas]);
+  if(s.sitasi!=null)cards.push(['Sitasi',s.sitasi]);
+  advDashboard.innerHTML=cards.map(([label,val])=>{
+    const v=Math.min(100,Math.max(0,val||0));const circ=100.5;const off=circ-circ*v/100;
+    const col=v>=75?'#22c55e':v>=50?'#fb923c':'#ef4444';
+    return `<div class="adv-score"><div class="adv-score-ring"><svg viewBox="0 0 36 36" width="40" height="40"><circle cx="18" cy="18" r="16" fill="none" stroke="#2a2a35" stroke-width="3"/><circle cx="18" cy="18" r="16" fill="none" stroke="${col}" stroke-width="3" stroke-dasharray="100.5" stroke-dashoffset="${off}" stroke-linecap="round"/></svg><div class="num" style="color:${col}">${v}</div></div><div class="adv-score-label">${label}</div></div>`;
+  }).join('');
+
+  showStats(Object.values(c).reduce((a,b)=>a+b,0),[c.aipattern,'Pola AI','#14b8a6'],[c.plagiat+c.sitasi,'Integritas','#dc2626'],[c.kuat,'Orisinal','#22c55e']);
+  const vals=cards.map(x=>x[1]).filter(v=>v!=null);
+  const avg=vals.length?Math.round(vals.reduce((a,b)=>a+b,0)/vals.length):0;
+  setScore(avg,'#22c55e','Skor Keseluruhan');applyFilter();
+}
+
+function renderRevisi(data){
+  const L={sesuai_revisi:'✅ Sudah Direvisi',parsial:'⚠️ Parsial',belum_revisi:'❌ Belum Direvisi'};
+  let c={sesuai_revisi:0,parsial:0,belum_revisi:0};
+  const order=['belum_revisi','parsial','sesuai_revisi'];
+  [...(data.temuan||[])].sort((a,b)=>order.indexOf(a.tipe)-order.indexOf(b.tipe)).forEach(t=>{if(c[t.tipe]!==undefined)c[t.tipe]++;suggestionsPanel.appendChild(buildCard(t,L[t.tipe]||t.tipe,'revisi'));});
+  const total=Object.values(c).reduce((a,b)=>a+b,0);
+  showStats(total,[c.belum_revisi,'Belum','#ef4444'],[c.parsial,'Parsial','#fb923c'],[c.sesuai_revisi,'Selesai','#22c55e']);
+  const pct=total>0?Math.round(c.sesuai_revisi/total*100):0;
+  setScore(pct,pct>=80?'#22c55e':pct>=50?'#fb923c':'#ef4444','Pemenuhan Revisi');applyFilter();
+}
+
+function showStats(total,a,b,cc){
+  statsBar.style.display='flex';
+  $('stat-total').textContent=total;
+  $('stat-a').textContent=a[0];$('stat-a').style.color=a[2];$('stat-a-label').textContent=a[1];
+  $('stat-b').textContent=b[0];$('stat-b').style.color=b[2];$('stat-b-label').textContent=b[1];
+  $('stat-c').textContent=cc[0];$('stat-c').style.color=cc[2];$('stat-c-label').textContent=cc[1];
+}
+
+function buildCard(t,tagLabel,mode){
+  let refHTML='';
+  if(t.referensi&&t.referensi.length>0){
+    const items=t.referensi.filter(r=>r.judul).map(ref=>{
+      const links=[];
+      if(ref.url_google)links.push(`<a class="s-ref-link scholar" href="${ref.url_google}" target="_blank" rel="noopener" onclick="event.stopPropagation()">🎓 Scholar</a>`);
+      if(ref.url_doi)links.push(`<a class="s-ref-link doi" href="${ref.url_doi}" target="_blank" rel="noopener" onclick="event.stopPropagation()">🔗 DOI</a>`);
+      const q=encodeURIComponent((ref.judul||'')+' '+(ref.penulis||''));
+      links.push(`<a class="s-ref-link google" href="https://www.google.com/search?q=${q}+filetype:pdf" target="_blank" rel="noopener" onclick="event.stopPropagation()">📖 Books</a>`);
+      links.push(`<a class="s-ref-link lib" href="https://lib.ui.ac.id/search?q=${encodeURIComponent(ref.judul||'')}" target="_blank" rel="noopener" onclick="event.stopPropagation()">🏛 Perpus</a>`);
+      return `<div class="s-ref-item"><div class="s-ref-judul">${ref.judul||''}</div><div class="s-ref-meta">${ref.penulis||''}</div>${ref.keterangan?`<div class="s-ref-meta" style="color:#6b7280;font-style:italic">${ref.keterangan}</div>`:''}<div class="s-ref-links">${links.join('')}</div></div>`;
+    }).join('');
+    if(items)refHTML=`<div class="s-ref-box"><div class="s-ref-header">📚 Referensi & Sumber</div>${items}</div>`;
+  }
+  let kutipanHTML='';
+  if(t.kutipan_asli){
+    const pengId='peng-'+t.id;
+    kutipanHTML=`<div class="s-kutipan"><div class="s-kutipan-label">📌 Teks di naskah Anda</div><div class="s-kutipan-teks">"${t.kutipan_asli}"</div>${t.kutipan_pengganti?`<div class="s-kutipan-pengganti"><div class="s-kutipan-pengganti-label">✏️ Saran pengganti${t.alasan_presisi?' (terverifikasi)':''}</div><div class="s-kutipan-pengganti-teks" id="${pengId}">"${t.kutipan_pengganti}"</div><button class="s-copy-btn" onclick="event.stopPropagation();copyText('${pengId}',this)">📋 Salin</button></div>`:''}</div>`;
+  }
+  let reviPoint='',statusBadge='',buktiBadge='';
+  if(mode==='revisi'){
+    if(t.poin_revisi_asli)reviPoint=`<div class="s-revisi-point"><strong>📋 Poin Revisi Penguji</strong>${t.poin_revisi_asli}</div>`;
+    const sm={sesuai_revisi:['sesuai','✅ Sudah Terpenuhi'],parsial:['parsial','⚠️ Terpenuhi Sebagian'],belum_revisi:['belum','❌ Belum Dipenuhi']}[t.tipe];
+    if(sm)statusBadge=`<div class="s-status-revisi ${sm[0]}">${sm[1]}</div>`;
+    if(t.bukti_dalam_naskah&&t.bukti_dalam_naskah.length>5)buktiBadge=`<div class="s-kutipan" style="border-color:#22c55e"><div class="s-kutipan-label" style="color:#22c55e">✅ Bukti dalam naskah</div><div class="s-kutipan-teks">"${t.bukti_dalam_naskah}"</div></div>`;
+  }
+  let conf='';
+  if(t.confidence){const cm={high:['high','Akurasi tinggi'],med:['med','Akurasi sedang'],low:['low','Perlu cek']}[t.confidence];if(cm)conf=`<div class="s-confidence"><span class="conf-dot ${cm[0]}"></span>${cm[1]}</div>`;}
+  const pedomanHTML=t.pedoman_match&&t.pedoman_match.trim()?`<div class="s-pedoman-match">📋 Pedoman: ${t.pedoman_match}</div>`:'';
+  const aspekLabel=t.bab||t.aspek||'';
+  const card=document.createElement('div');
+  card.className='suggestion-card visible';card.dataset.id=t.id;card.dataset.type=t.tipe;
+  card.innerHTML=`<div class="s-header"><div class="s-tag ${t.tipe}">${tagLabel}</div>${aspekLabel?`<div class="s-aspek">${aspekLabel}</div>`:''}${conf}</div>${statusBadge}${pedomanHTML}<div class="s-title">${t.judul||''}</div><div class="s-body">${t.status_detail||t.deskripsi||''}</div>${reviPoint}${buktiBadge}${kutipanHTML}${t.saran?`<div class="s-saran"><strong>💡 ${mode==='revisi'?'Langkah Selanjutnya':'Saran & Arahan'}</strong>${t.saran}</div>`:''}${refHTML}`;
+  card.addEventListener('click',()=>focusCard(t.id));
+  return card;
+}
+
+function copyText(id,btn){
+  const el=$(id);if(!el)return;
+  const txt=el.textContent.replace(/^"|"$/g,'');
+  navigator.clipboard.writeText(txt).then(()=>{btn.textContent='✅ Tersalin!';setTimeout(()=>btn.textContent='📋 Salin',1500);});
+}
+
+function setScore(skor,color,sublabel){
+  const s=Math.min(100,Math.max(0,skor));const circ=113.1;
+  setTimeout(()=>{$('score-circle').style.strokeDashoffset=circ-circ*s/100;$('score-circle').style.stroke=color;$('score-num').style.color=color;},100);
+  $('score-num').textContent=s;
+  $('score-label').textContent=s>=80?'Sangat Baik':s>=65?'Cukup Baik':s>=50?'Perlu Perbaikan':'Banyak Revisi';
+  $('score-sublabel').textContent=sublabel;
+}
+function focusCard(id){
+  document.querySelectorAll('.suggestion-card').forEach(c=>c.classList.remove('active'));
+  const card=document.querySelector(`.suggestion-card[data-id="${id}"]`);
+  if(card){card.classList.add('active');card.scrollIntoView({behavior:'smooth',block:'nearest'});}
+  document.querySelectorAll('.hl').forEach(s=>s.style.outline='none');
+  const span=document.querySelector(`.hl[data-id="${id}"]`);
+  if(span){span.style.outline='2px solid white';span.scrollIntoView({behavior:'smooth',block:'center'});}
+}
+function escapeHtml(t){return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');}
+function escapeRegex(s){return s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');}
+
+function demoAnalisis(){return{skor:65,ringkasan:"Naskah cukup baik namun perlu perbaikan metodologi.",temuan:[{id:"t1",tipe:"ubah",aspek:"METODOLOGI",judul:"Uji validitas belum lengkap",deskripsi:"Tidak ada keterangan uji validitas instrumen.",saran:"Tambahkan tabel uji validitas.",kutipan_asli:"instrumen yang digunakan",kutipan_pengganti:"",referensi:[{judul:"Metode Penelitian Kuantitatif",penulis:"Sugiyono, 2019",url_google:"https://scholar.google.com/scholar?q=Sugiyono+Metode+Penelitian",url_doi:"",keterangan:"Panduan uji validitas"}]}]};}
+function demoAdvance(){return{_scores:{orisinalitas:72,kualitas:68,sitasi:60},temuan:[{id:"adv0",tipe:"kaku",aspek:"KUALITAS TULISAN",judul:"Kalimat terdengar generik",deskripsi:"Pembukaan paragraf menggunakan frasa template yang umum dipakai.",saran:"Mulai dengan data atau fakta spesifik agar lebih kuat dan personal.",kutipan_asli:"Dalam menjalankan tugas tersebut",kutipan_pengganti:"Di lapangan, tuntutan operasional 24 jam membuat",confidence:"high",alasan_presisi:"Lebih spesifik dan konkret"},{id:"adv1",tipe:"sitasi",aspek:"INTEGRITAS AKADEMIK",judul:"Klaim statistik tanpa rujukan",deskripsi:"Angka prevalensi disebutkan tanpa sumber.",saran:"Tambahkan sitasi (Penulis, Tahun) setelah angka.",kutipan_asli:"sangat mengkhawatirkan",kutipan_pengganti:"sangat mengkhawatirkan (Razanah dkk., 2026)",confidence:"med"}]};}
+function demoRevisi(){return{skor_revisi:40,ringkasan:"Sebagian poin revisi sudah dipenuhi.",temuan:[{id:"r1",tipe:"belum_revisi",bab:"BAB I",judul:"Belum ada wawancara pendahuluan",poin_revisi_asli:"Menambahkan hasil wawancara pendahuluan.",status_detail:"Tidak ditemukan hasil wawancara dalam naskah.",bukti_dalam_naskah:"",saran:"Lakukan wawancara dengan 3-5 personel, kutip di latar belakang.",kutipan_asli:"kondisi burnout pada personel",referensi:[]}]};}
+</script>
+</body>
+</html>
